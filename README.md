@@ -4,6 +4,8 @@
 
 Reference counted explicit resource management in TypeScript.
 
+## Usage
+
 ```typescript
 import { rc } from "@xubaiwang/rc-dispose";
 
@@ -21,3 +23,13 @@ const rcFoo = rc(foo, { count: 2 });
 using foo1 = rcFoo;
 using foo2 = rcFoo;
 ```
+
+## Comparison with other approaches
+
+- `FinalizationRegistry`: not guranteed to be called
+- ordinary `using`: cannot span across scopes
+
+## Ceveats
+
+- identity from ownership to refcount is not guranteed (c.f. Rust `Rc`)
+- all known ceveats from `Proxy`
