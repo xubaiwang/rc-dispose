@@ -1,5 +1,7 @@
 # rc-dispose
 
+[![JSR](https://jsr.io/badges/@xubaiwang/rc-dispose)](https://jsr.io/@xubaiwang/rc-dispose)
+
 Reference counted explicit resource management in TypeScript.
 
 ```typescript
