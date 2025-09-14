@@ -80,7 +80,7 @@ function rc<T extends object>(
             count -= 1;
           }
           if (count == 0) {
-            Reflect.apply(dispose, target, []);
+            return Reflect.apply(dispose, target, []);
           }
         };
       } else if (prop === Symbol.asyncDispose) {
@@ -94,8 +94,9 @@ function rc<T extends object>(
         return function () {
           if (count > 0) {
             count -= 1;
-          } else {
-            Reflect.apply(asyncDispose, target, []);
+          }
+          if (count == 0) {
+            return Reflect.apply(asyncDispose, target, []);
           }
         };
       } else {
