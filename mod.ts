@@ -1,3 +1,37 @@
+type WithDisposable<O> = O extends { dispose: () => void } ? Disposable
+  : unknown;
+
+type WithAsyncDisposable<O> = O extends { asyncDispose: () => Promise<void> }
+  ? AsyncDisposable
+  : unknown;
+
+type WithIncrement<O> = O extends { increase: infer I }
+  ? (I extends (string | symbol) ? Record<I, (n?: number) => number> : never)
+  : unknown;
+
+/**
+ * Rc wrapped value.
+ */
+export type Rc<T, O> =
+  & T
+  & WithDisposable<O>
+  & WithAsyncDisposable<O>
+  & WithIncrement<O>;
+
+/**
+ * Extra options of {@link rc}.
+ */
+export interface RcOptions {
+  /** The initial count of rc. */
+  count?: number;
+  /** Use custom `dispose` instead of the value's `Symbol.dispose`. */
+  dispose?(): void;
+  /** Use custom `asyncDispose` instead of the value's `Symbol.asyncDispose`. */
+  asyncDispose?(): Promise<void>;
+  /** Expose increase function. */
+  increase?: string | symbol;
+}
+
 /**
  * Wrap a disposable or async disposable value in RC,
  * so that it have to be disposed multiple times to actually dispose it.
@@ -6,52 +40,12 @@
  * @param options extra options, see {@link RcOptionsSimple}
  * @returns reference counted disposable or async disposable
  */
-function rc<T extends Disposable | AsyncDisposable>(
+export function rc<T extends object, const O extends RcOptions>(
   value: T,
-  options?: RcOptionsSimple,
-): T;
-/**
- * Wrap a disposable or async disposable value in RC,
- * so that it have to be disposed multiple times to actually dispose it.
- *
- * @param value the value to wrap
- * @param options extra options, see {@link RcOptionsDispose}
- * @returns reference counted disposable or async disposable, with dispose overridden
- */
-function rc<T extends object>(
-  value: T,
-  options?: RcOptionsDispose,
-): T & Disposable;
-/**
- * Wrap a disposable or async disposable value in RC,
- * so that it have to be disposed multiple times to actually dispose it.
- *
- * @param value the value to wrap
- * @param options extra options, see {@link RcOptionsDispose}
- * @returns reference counted disposable or async disposable, with asyncDispose overridden
- */
-function rc<T extends object>(
-  value: T,
-  options?: RcOptionsAsyncDispose,
-): T & AsyncDisposable;
-/**
- * Wrap a disposable or async disposable value in RC,
- * so that it have to be disposed multiple times to actually dispose it.
- *
- * @param value the value to wrap
- * @param options extra options, see {@link RcOptionsDispose}
- * @returns reference counted disposable or async disposable, with both dispose and asyncDispose overridden
- */
-function rc<T extends object>(
-  value: T,
-  options?: RcOptionsDispose & RcOptionsAsyncDispose,
-): T & Disposable & AsyncDisposable;
-function rc<T extends object>(
-  value: T,
-  options?: RcOptions,
-): T & (Disposable | AsyncDisposable) {
+  options: O,
+): Rc<T, O> {
   // validate count
-  let count = options?.count ?? 1;
+  let count = options?.count ?? 0;
   if (!Number.isInteger(count) || count < 0) {
     throw new RangeError("count must be non negative integer");
   }
@@ -99,57 +93,18 @@ function rc<T extends object>(
             return Reflect.apply(asyncDispose, target, []);
           }
         };
-      } else if (options?.increment && prop == options.increment) {
-        // TODO: need type
+      } else if (options?.increase && prop == options.increase) {
         return function (n: number = 1) {
           if (!Number.isInteger(n) || n < 0) {
             throw new RangeError("n must be non negative integer");
           }
           count += n;
+          return count;
         };
       } else {
         // fallback to object
         return Reflect.get(target, prop, receiver);
       }
     },
-  }) as (T & (Disposable | AsyncDisposable));
-}
-
-export { rc };
-
-/**
- * Extra options of {@link rc}.
- */
-export type RcOptions =
-  | RcOptionsSimple
-  | RcOptionsDispose
-  | RcOptionsAsyncDispose;
-
-export interface RcOptionsBase {
-  /** The initial count of rc. */
-  count?: number;
-  /** Where to expose increment symbol. */
-  increment?: string | symbol;
-}
-
-/**
- * Extra options of {@link rc}, simple options.
- */
-export interface RcOptionsSimple extends RcOptionsBase {
-}
-
-/**
- * Extra options of {@link rc}, with dispose override.
- */
-export interface RcOptionsDispose extends RcOptionsBase {
-  /** Use custom `dispose` instead of the value's `Symbol.dispose`. */
-  dispose?(): void;
-}
-
-/**
- * Extra options of {@link rc}, with async dispose override.
- */
-export interface RcOptionsAsyncDispose extends RcOptionsBase {
-  /** Use custom `asyncDispose` instead of the value's `Symbol.asyncDispose`. */
-  asyncDispose?(): Promise<void>;
+  }) as Rc<T, O>;
 }
