@@ -52,8 +52,8 @@ function rc<T extends object>(
 ): T & (Disposable | AsyncDisposable) {
   // validate count
   let count = options?.count ?? 1;
-  if (!Number.isInteger(count) || count < 1) {
-    throw new RangeError("count must be positive integer");
+  if (!Number.isInteger(count) || count < 0) {
+    throw new RangeError("count must be non negative integer");
   }
 
   // record dispose functions
@@ -99,6 +99,14 @@ function rc<T extends object>(
             return Reflect.apply(asyncDispose, target, []);
           }
         };
+      } else if (options?.increment && prop == options.increment) {
+        // TODO: need type
+        return function (n: number = 1) {
+          if (!Number.isInteger(n) || n < 0) {
+            throw new RangeError("n must be non negative integer");
+          }
+          count += n;
+        };
       } else {
         // fallback to object
         return Reflect.get(target, prop, receiver);
@@ -117,20 +125,23 @@ export type RcOptions =
   | RcOptionsDispose
   | RcOptionsAsyncDispose;
 
+export interface RcOptionsBase {
+  /** The initial count of rc. */
+  count?: number;
+  /** Where to expose increment symbol. */
+  increment?: string | symbol;
+}
+
 /**
  * Extra options of {@link rc}, simple options.
  */
-export interface RcOptionsSimple {
-  /** The initial count of rc. */
-  count?: number;
+export interface RcOptionsSimple extends RcOptionsBase {
 }
 
 /**
  * Extra options of {@link rc}, with dispose override.
  */
-export interface RcOptionsDispose {
-  /** The initial count of rc. */
-  count?: number;
+export interface RcOptionsDispose extends RcOptionsBase {
   /** Use custom `dispose` instead of the value's `Symbol.dispose`. */
   dispose?(): void;
 }
@@ -138,9 +149,7 @@ export interface RcOptionsDispose {
 /**
  * Extra options of {@link rc}, with async dispose override.
  */
-export interface RcOptionsAsyncDispose {
-  /** The initial count of rc. */
-  count?: number;
+export interface RcOptionsAsyncDispose extends RcOptionsBase {
   /** Use custom `asyncDispose` instead of the value's `Symbol.asyncDispose`. */
   asyncDispose?(): Promise<void>;
 }
