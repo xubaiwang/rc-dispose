@@ -14,7 +14,7 @@ await build({
   },
   package: {
     // package.json properties
-    name: "rc-dispose",
+    name: "@xubaiwang/rc-dispose",
     version: Deno.args[0],
     description:
       "Reference counted explicit resource management in TypeScript.",
