@@ -1,6 +1,7 @@
 # rc-dispose
 
 [![JSR](https://jsr.io/badges/@xubaiwang/rc-dispose)](https://jsr.io/@xubaiwang/rc-dispose)
+[![NPM](https://img.shields.io/npm/v/@xubaiwang/rc-dispose.svg)](https://www.npmjs.com/package/@xubaiwang/rc-dispose)
 
 Reference counted explicit resource management in TypeScript.
 
