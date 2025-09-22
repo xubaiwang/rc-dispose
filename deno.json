@@ -5,5 +5,8 @@
   "exports": "./mod.ts",
   "imports": {
     "@std/assert": "jsr:@std/assert"
+  },
+  "tasks": {
+    "npm": "deno run -A scripts/build_npm.ts"
   }
 }
