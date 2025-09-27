@@ -1,3 +1,5 @@
+export const increase = Symbol.for("rc-dispose.increase");
+
 type WithDisposable<O> = O extends { dispose: () => void } ? Disposable
   : unknown;
 
@@ -5,9 +7,7 @@ type WithAsyncDisposable<O> = O extends { asyncDispose: () => Promise<void> }
   ? AsyncDisposable
   : unknown;
 
-type WithIncrement<O> = O extends { increase: infer I }
-  ? (I extends (string | symbol) ? Record<I, (n?: number) => number> : never)
-  : unknown;
+type WithIncrease = { [increase]: (n?: number) => number };
 
 /**
  * Rc wrapped value.
@@ -16,7 +16,7 @@ export type Rc<T, O> =
   & T
   & WithDisposable<O>
   & WithAsyncDisposable<O>
-  & WithIncrement<O>;
+  & WithIncrease;
 
 /**
  * Extra options of {@link rc}.
@@ -28,8 +28,6 @@ export interface RcOptions {
   dispose?(): void;
   /** Use custom `asyncDispose` instead of the value's `Symbol.asyncDispose`. */
   asyncDispose?(): Promise<void>;
-  /** Expose increase function. */
-  increase?: string | symbol;
 }
 
 /**
@@ -93,7 +91,7 @@ export function rc<T extends object, const O extends RcOptions>(
             return Reflect.apply(asyncDispose, target, []);
           }
         };
-      } else if (options?.increase && prop == options.increase) {
+      } else if (prop === increase) {
         return function (n: number = 1) {
           if (!Number.isInteger(n) || n < 0) {
             throw new RangeError("n must be non negative integer");
