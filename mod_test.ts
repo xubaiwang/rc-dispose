@@ -1,5 +1,5 @@
 import { assertEquals } from "@std/assert";
-import { rc } from "@xubaiwang/rc-dispose";
+import { increase, rc } from "@xubaiwang/rc-dispose";
 
 Deno.test("dispose", () => {
   let called = 0;
@@ -39,7 +39,6 @@ Deno.test("dispose increment", () => {
       called += 1;
     },
   };
-  const increase = Symbol("increase");
   const rcA = rc(a, { count: 2, increase });
   {
     using _a1 = rcA;
@@ -61,7 +60,6 @@ Deno.test("async dispose increment", async () => {
       called += 1;
     },
   };
-  const increase = Symbol("increase");
   const rcA = rc(a, { count: 2, increase });
   {
     await using _a1 = rcA;
