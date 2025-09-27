@@ -5,7 +5,7 @@ type WithIncrease = { [increase]: (n?: number) => number };
 /**
  * Rc wrapped value.
  */
-export type Rc<T, O> =
+export type Rc<T> =
   & T
   & WithIncrease;
 
@@ -28,7 +28,7 @@ export interface RcOptions {
 export function rc<T extends object, const O extends RcOptions>(
   value: T,
   options: O,
-): Rc<T, O> {
+): Rc<T> {
   // validate count
   let count = options?.count ?? 0;
   if (!Number.isInteger(count) || count < 0) {
@@ -79,5 +79,5 @@ export function rc<T extends object, const O extends RcOptions>(
         return Reflect.get(target, prop, receiver);
       }
     },
-  }) as Rc<T, O>;
+  }) as Rc<T>;
 }
