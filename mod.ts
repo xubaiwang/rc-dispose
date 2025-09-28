@@ -85,15 +85,24 @@ export function rc<T extends object, const O extends RcOptions>(
         }
         // Symbol.for("rc-dispose.count")
         case countSymbol: {
-          return function (n?: number): number {
+          return function (n?: number | ((_: number) => number)): number {
             // no n => getter
             if (!n) return state.count;
 
-            if (!Number.isInteger(n) || n < 0) {
-              throw new RangeError("n must be non negative integer");
+            if (n instanceof Function) {
+              const result = n(state.count);
+              if (!Number.isInteger(result) || result < 0) {
+                throw new RangeError("n must return non negative integer");
+              }
+              state.count = result;
+              return state.count;
+            } else {
+              if (!Number.isInteger(n) || n < 0) {
+                throw new RangeError("n must be non negative integer");
+              }
+              state.count = n;
+              return state.count;
             }
-            state.count = n;
-            return state.count;
           };
         }
         // fallback to object
