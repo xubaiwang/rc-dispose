@@ -1,13 +1,22 @@
-export const increase = Symbol.for("rc-dispose.increase");
+const cloneSymbol = Symbol.for("rc-dispose.clone");
+const countSymbol = Symbol.for("rc-dispose.count");
 
-type WithIncrease = { [increase]: (n?: number) => number };
+export { cloneSymbol as clone, countSymbol as count };
+
+type RcManagement<T> = {
+  /**
+   * This is dangerous.
+   */
+  [countSymbol](n?: number): number;
+  [cloneSymbol](): T;
+};
 
 /**
  * Rc wrapped value.
  */
 export type Rc<T> =
   & T
-  & WithIncrease;
+  & RcManagement<T>;
 
 /**
  * Extra options of {@link rc}.
@@ -22,62 +31,91 @@ export interface RcOptions {
  * so that it have to be disposed multiple times to actually dispose it.
  *
  * @param value the value to wrap
- * @param options extra options, see {@link RcOptionsSimple}
+ * @param options extra options, see {@link RcOptions}
  * @returns reference counted disposable or async disposable
  */
 export function rc<T extends object, const O extends RcOptions>(
   value: T,
-  options: O,
+  options?: O,
 ): Rc<T> {
-  // validate count
-  let count = options?.count ?? 0;
-  if (!Number.isInteger(count) || count < 0) {
-    throw new RangeError("count must be non negative integer");
-  }
+  const validated = validateOptions(options);
+  const state = { ...validated };
 
-  return new Proxy(value, {
-    // intercept Symbol.dispose or Symbol.asyncDispose
+  const proxy = new Proxy(value, {
     get(target, prop, receiver) {
-      if (prop === Symbol.dispose) {
-        const dispose = Reflect.get(target, prop, receiver) as
-          | (() => void)
-          | undefined;
-        if (!dispose) return dispose;
-        return function () {
-          if (count > 0) {
-            count -= 1;
-          }
-          if (count == 0) {
-            return Reflect.apply(dispose, target, []);
-          }
-        };
-      } else if (prop === Symbol.asyncDispose) {
-        const asyncDispose = Reflect.get(
-          target,
-          prop,
-          receiver,
-        ) as (() => Promise<void> | undefined);
-        if (!asyncDispose) return asyncDispose;
-        return function () {
-          if (count > 0) {
-            count -= 1;
-          }
-          if (count == 0) {
-            return Reflect.apply(asyncDispose, target, []);
-          }
-        };
-      } else if (prop === increase) {
-        return function (n: number = 1) {
-          if (!Number.isInteger(n) || n < 0) {
-            throw new RangeError("n must be non negative integer");
-          }
-          count += n;
-          return count;
-        };
-      } else {
+      switch (prop) {
+        // dispose
+        case Symbol.dispose: {
+          const dispose = Reflect.get(target, prop, receiver) as
+            | (() => void)
+            | undefined;
+          if (!dispose) return dispose;
+          return function () {
+            if (state.count > 0) {
+              state.count -= 1;
+            }
+            if (state.count == 0) {
+              return Reflect.apply(dispose, target, []);
+            }
+          };
+        }
+        // async dispose
+        case Symbol.asyncDispose: {
+          const asyncDispose = Reflect.get(
+            target,
+            prop,
+            receiver,
+          ) as (() => Promise<void> | undefined);
+          if (!asyncDispose) return asyncDispose;
+          return function () {
+            if (state.count > 0) {
+              state.count -= 1;
+            }
+            if (state.count == 0) {
+              return Reflect.apply(asyncDispose, target, []);
+            }
+          };
+        }
+        // Symbol.for("rc-dispose.clone")
+        case cloneSymbol: {
+          return function (): Rc<T> {
+            state.count += 1;
+            return proxy;
+          };
+        }
+        // Symbol.for("rc-dispose.count")
+        case countSymbol: {
+          return function (n?: number): number {
+            // no n => getter
+            if (!n) return state.count;
+
+            if (!Number.isInteger(n) || n < 0) {
+              throw new RangeError("n must be non negative integer");
+            }
+            state.count = n;
+            return state.count;
+          };
+        }
         // fallback to object
-        return Reflect.get(target, prop, receiver);
+        default: {
+          return Reflect.get(target, prop, receiver);
+        }
       }
     },
   }) as Rc<T>;
+
+  return proxy;
+}
+
+/**
+ * Validate rc options.
+ */
+function validateOptions(options?: RcOptions): Required<RcOptions> {
+  const count = options?.count ?? 1;
+  if (!Number.isInteger(count) || count < 0) {
+    throw new RangeError("count must be non negative integer");
+  }
+  return {
+    count,
+  };
 }

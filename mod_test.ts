@@ -1,74 +1,49 @@
 import { assertEquals } from "@std/assert";
-import { increase, rc } from "@xubaiwang/rc-dispose";
+import { clone, rc } from "./mod.ts";
 
-Deno.test("dispose", () => {
+Deno.test("dispose clone", () => {
   let called = 0;
+
   const a = {
     [Symbol.dispose]() {
       called += 1;
     },
   };
-  const rcA = rc(a, { count: 2 });
+
+  const a1 = rc(a);
+  const a2 = a1[clone]();
+
   {
-    using _a1 = rcA;
-    using _a2 = rcA;
+    using _a = a1;
+  }
+  assertEquals(called, 0);
+
+  {
+    using _a = a2;
   }
   assertEquals(called, 1);
 });
 
-Deno.test("async dispose", async () => {
+Deno.test("asyncDispose clone", async () => {
   let called = 0;
+
   const a = {
     // deno-lint-ignore require-await
     async [Symbol.asyncDispose]() {
       called += 1;
     },
   };
-  const rcA = rc(a, { count: 2 });
-  {
-    await using _a1 = rcA;
-    await using _a2 = rcA;
-  }
-  assertEquals(called, 1);
-});
 
-Deno.test("dispose increment", () => {
-  let called = 0;
-  const a = {
-    [Symbol.dispose]() {
-      called += 1;
-    },
-  };
-  const rcA = rc(a, { count: 2, increase });
+  const a1 = rc(a);
+  const a2 = a1[clone]();
+
   {
-    using _a1 = rcA;
-    rcA[increase]();
-    using _a2 = rcA;
+    await using _a = a1;
   }
   assertEquals(called, 0);
-  {
-    using _a3 = rcA;
-  }
-  assertEquals(called, 1);
-});
 
-Deno.test("async dispose increment", async () => {
-  let called = 0;
-  const a = {
-    // deno-lint-ignore require-await
-    async [Symbol.asyncDispose]() {
-      called += 1;
-    },
-  };
-  const rcA = rc(a, { count: 2, increase });
   {
-    await using _a1 = rcA;
-    rcA[increase]();
-    await using _a2 = rcA;
-  }
-  assertEquals(called, 0);
-  {
-    await using _a3 = rcA;
+    await using _a = a2;
   }
   assertEquals(called, 1);
 });

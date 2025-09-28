@@ -1,4 +1,4 @@
-import { rc } from "../mod.ts";
+import { clone, rc } from "../mod.ts";
 
 class LogWhenDispose {
   constructor(public name: string) {}
@@ -7,9 +7,5 @@ class LogWhenDispose {
   }
 }
 
-using _a = new LogWhenDispose("a");
-
-// b need two using to dispose.
-const b = rc(new LogWhenDispose("b"), { count: 2 });
-using _b1 = b;
-using _b2 = b;
+using a = rc(new LogWhenDispose("a"));
+using _b = a[clone]();
