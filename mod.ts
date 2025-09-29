@@ -8,7 +8,7 @@ type RcManagement<T> = {
    * This is dangerous.
    */
   [countSymbol](n?: number): number;
-  [cloneSymbol](): T;
+  [cloneSymbol](): Rc<T>;
 };
 
 /**
